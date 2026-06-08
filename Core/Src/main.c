@@ -19,9 +19,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "spi.h"
+#include "stm32f1xx_hal.h"
+#include "stm32f1xx_hal_gpio.h"
+#include "stm32f1xx_hal_tim.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include "stdbool.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -30,7 +33,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+void IV6_WritePin(GPIO_PinState state);
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -44,14 +47,14 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+uint8_t counter = 0;
 
 /* USER CODE BEGIN PV */
 HT1621B_HandleTypeDef hlcd;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-
-
+void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -92,14 +95,20 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_SPI2_Init();
+  MX_TIM1_Init();
+
   /* USER CODE BEGIN 2 */
-  HT1621B_Init(&hlcd, &hspi2, CS_GPIO_Port, CS_Pin, 13);
+  // HT1621B_Init(&hlcd, &hspi2, CS_GPIO_Port, CS_Pin, 13);
 
-  HT1621B_SetAll(&hlcd);
+  // HT1621B_SetAll(&hlcd);
 
-  HAL_Delay(2000);
+  // HAL_Delay(2000);
 
-  HT1621B_PowerDown(&hlcd);
+  // HT1621B_PowerDown(&hlcd);
+
+  // Start PWM signal on TIM1 Channel 1
+  //HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+HAL_GPIO_WritePin(DATA_B_GPIO_Port, DATA_B_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,8 +118,24 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin(USER_LED_GPIO_Port, USER_LED_Pin);
-    HAL_Delay(128);
+
+    // LOGIKA JEST ODWROTNA, CZYLI 1 TO SET, A 0 TO RESET, dodatkowo wypoisywany jest MSB pierwszy, czyli 7, potem 6 itd. do 0
+    for(size_t i = 0; i < 8; i++) 
+    {
+      if(counter == i) 
+      {
+        IV6_WritePin(GPIO_PIN_RESET);
+      } else {
+        IV6_WritePin(GPIO_PIN_SET);
+      }
+    }  
+
+    counter++;
+    if(counter > 7) counter = 0;
+
+    HAL_Delay(350);
+  
+
   }
   /* USER CODE END 3 */
 }
@@ -154,6 +179,15 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void IV6_WritePin(GPIO_PinState state)
+{
+  HAL_GPIO_WritePin(CLK_PIN_GPIO_Port, CLK_PIN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(DATA_A_GPIO_Port, DATA_A_Pin, state);
+  HAL_GPIO_WritePin(CLK_PIN_GPIO_Port, CLK_PIN_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(CLK_PIN_GPIO_Port, CLK_PIN_Pin, GPIO_PIN_RESET);
+}
+
 
 /* USER CODE END 4 */
 
